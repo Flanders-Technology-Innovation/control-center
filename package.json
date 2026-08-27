@@ -15,7 +15,7 @@
     "ingest": "node scripts/ingest.mjs",
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
-    "start": "next start --hostname 127.0.0.1",
+    "start": "next start --hostname 0.0.0.0",
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts",
     "smoke": "node scripts/smoke.mjs",
