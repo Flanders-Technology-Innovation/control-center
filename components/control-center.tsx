@@ -280,6 +280,19 @@ type WorkspaceRecovery = {
   workspace: WorkspaceState;
 };
 
+// The route handlers explain what actually failed; the gateway in front of them
+// explains it too, and its answer never reaches the SQLite layer a local
+// diagnostic inspects. Carry that sentence to the screen rather than dropping it.
+async function failureDetail(response: Response) {
+  try {
+    const body = (await response.json()) as { error?: unknown };
+    const detail = typeof body.error === "string" ? body.error.trim() : "";
+    return detail ? ` ${detail}` : ` The server answered ${response.status}.`;
+  } catch {
+    return ` The server answered ${response.status}.`;
+  }
+}
+
 function readWorkspaceRecovery(): WorkspaceRecovery | null {
   try {
     const value = window.localStorage.getItem(WORKSPACE_RECOVERY_KEY);
@@ -3406,11 +3419,11 @@ export function ControlCenter() {
         ]);
         if (!settingsResponse.ok)
           throw new Error(
-            "Settings could not be read. Your saved configuration was not changed.",
+            `Settings could not be read. Your saved configuration was not changed.${await failureDetail(settingsResponse)}`,
           );
         if (!workspaceResponse.ok)
           throw new Error(
-            "Tasks and reminders could not be read. Your saved workspace was not changed.",
+            `Tasks and reminders could not be read. Your saved workspace was not changed.${await failureDetail(workspaceResponse)}`,
           );
         const [loadedSettings, saved] = await Promise.all([
           settingsResponse.json() as Promise<PublicSettings>,
@@ -3436,7 +3449,7 @@ export function ControlCenter() {
           });
           if (!importResponse.ok)
             throw new Error(
-              "The first-run workspace could not be initialized. No local data was replaced.",
+              `The first-run workspace could not be initialized. No local data was replaced.${await failureDetail(importResponse)}`,
             );
           nextWorkspace = (await importResponse.json()) as WorkspaceState;
         }
@@ -3493,7 +3506,7 @@ export function ControlCenter() {
       });
       if (!response.ok)
         throw new Error(
-          "Tasks and reminders could not be saved to SQLite. Keep this page open and retry.",
+          `Tasks and reminders could not be saved to SQLite. Keep this page open and retry.${await failureDetail(response)}`,
         );
       try {
         if (readWorkspaceRecovery()?.id === recovery.id)

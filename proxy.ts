@@ -10,6 +10,19 @@ function isLoopback(value: string) {
   }
 }
 
+function originOf(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+}
+
+// Forwarding headers accumulate one value per hop; the first is the client's.
+function firstHeaderValue(request: NextRequest, header: string) {
+  return request.headers.get(header)?.split(",")[0].trim() || "";
+}
+
 // Behind the platform gateway the Host header is the app's public hostname and
 // the gateway authenticates every visitor, so the local-only host guard would
 // reject legitimate traffic. Detected per request, never at import time.
@@ -19,22 +32,38 @@ function isBehindPlatformGateway(request: NextRequest) {
   );
 }
 
-function isSameOrigin(value: string, request: NextRequest) {
-  try {
-    const requestUrl = new URL(request.url);
-    requestUrl.host =
-      request.headers.get("x-forwarded-host") ||
-      request.headers.get("host") ||
-      requestUrl.host;
-    const forwardedProtocol = request.headers
-      .get("x-forwarded-proto")
-      ?.split(",")[0]
-      .trim();
-    if (forwardedProtocol) requestUrl.protocol = `${forwardedProtocol}:`;
-    return new URL(value).origin === requestUrl.origin;
-  } catch {
-    return false;
+// Every address this app is legitimately reached at. The request URL is not one
+// of them behind the gateway: it keeps the container's internal port, which no
+// browser ever sees, and overwriting its host does not drop that port. So each
+// address is built from scratch and normalized through URL.origin instead.
+function sameOriginAddresses(request: NextRequest) {
+  const addresses = new Set<string>();
+  // spin injects the app's public address; it outranks any request header.
+  const publicOrigin = originOf(process.env.SPIN_APP_URL?.trim() || "");
+  if (publicOrigin) addresses.add(publicOrigin);
+  const requestUrl = new URL(request.url);
+  const forwardedHost = firstHeaderValue(request, "x-forwarded-host");
+  const forwardedProtocol = firstHeaderValue(request, "x-forwarded-proto");
+  const host =
+    forwardedHost || request.headers.get("host")?.trim() || requestUrl.host;
+  // The gateway terminates TLS, so a forwarded request carries an https Origin
+  // even though this server only ever speaks http. When the gateway names the
+  // scheme, trust it; when it stays silent, accept the app's own host on either.
+  const protocols = forwardedProtocol
+    ? [forwardedProtocol]
+    : forwardedHost
+      ? ["https", "http"]
+      : [requestUrl.protocol.replace(":", "")];
+  for (const protocol of protocols) {
+    const origin = originOf(`${protocol}://${host}`);
+    if (origin) addresses.add(origin);
   }
+  return addresses;
+}
+
+function isSameOrigin(value: string, request: NextRequest) {
+  const origin = originOf(value);
+  return Boolean(origin) && sameOriginAddresses(request).has(origin);
 }
 
 export function proxy(request: NextRequest) {
