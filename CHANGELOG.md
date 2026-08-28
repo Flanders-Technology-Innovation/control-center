@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed every write behind the company gateway being refused as a cross-site request, which stopped Control Center from opening with "The first-run workspace could not be initialized." The same-origin check rebuilt the request origin from the request URL, which keeps the container's internal port that no browser ever sees; it now compares against the app's public address (`SPIN_APP_URL`) and the forwarded host, and tolerates a gateway that does not send `X-Forwarded-Proto`.
+- Made the startup failure screen and the workspace save error repeat the reason the server gave, so a refused request is no longer reported as a local-data problem to investigate with `npm run doctor`.
+
 ## 0.3.1 - 2026-08-25
 
 - Added persistent dark mode with a saved theme preference.
