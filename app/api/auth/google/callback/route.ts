@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { googleRedirectUri } from "@/lib/server/oauth-redirect";
 import { readSettings, saveGmailTokens } from "@/lib/server/settings";
 
 export const runtime = "nodejs";
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(destination);
   }
   const settings = await readSettings();
-  const redirectUri = new URL("/api/auth/google/callback", request.url).toString();
+  const redirectUri = googleRedirectUri(request);
   try {
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
