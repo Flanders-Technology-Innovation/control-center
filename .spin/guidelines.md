@@ -60,7 +60,8 @@ builds, runs, and stays secure on the platform.
   `X-Spin-Atlassian-Api-Token`, and a ready-made `X-Spin-Atlassian-Authorization` (Basic) value.
   Call `{siteUrl}/rest/api/3/...` (Jira) or `{siteUrl}/wiki/rest/api/...` (Confluence) with it,
   server-side only. Do **not** build your own Atlassian OAuth flow or "connect your account"
-  screen, and never store or log the token.
+  screen, and never print, log, store or send the token to the browser — it belongs
+  to the visitor, not to the app, and spin checks every commit for it.
 - In local development those headers are absent; fall back to a `SPIN_DEV_ATLASSIAN` env var
   (JSON: `{"siteUrl":...,"email":...,"apiToken":...}`) so the app is testable with your own token.
 
@@ -70,7 +71,8 @@ builds, runs, and stays secure on the platform.
   (https://api.hubapi.com), `X-Spin-Hubspot-Access-Token`, a ready-made
   `X-Spin-Hubspot-Authorization` (`Bearer …`) value, and `X-Spin-Hubspot-Portal-Id`. Call
   `{baseUrl}/crm/v3/...` with it, server-side only. Do **not** build your own HubSpot OAuth flow
-  or "connect your account" screen, and never store or log the token.
+  or "connect your account" screen, and never print, log, store or send the token to the browser —
+  it belongs to the visitor, not to the app, and spin checks every commit for it.
 - The token is **opaque and can be short-lived**: users connect with a personal access key, a
   service key, or spin's own HubSpot OAuth app, and spin renews expiring credentials itself — read
   the token fresh from the headers on every request, and don't assume the `pat-…` shape. A 403
@@ -184,6 +186,14 @@ builds, runs, and stays secure on the platform.
   user, password, host or port**, and never assume another app's data is reachable — it is not.
 - Locally, run your own Postgres (e.g. `docker run -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:17-alpine`)
   and put its URL in `.env`. Keep the same schema/migrations locally and in production.
+- **Qdrant is the default vector database on spin.** If this app stores embeddings — semantic
+  search, RAG, recommendations — use Qdrant rather than embedding a vector store in the container
+  (Chroma, FAISS on disk, LanceDB: all wiped on the next deploy) or reaching for a hosted one. spin
+  runs one shared Qdrant server and injects `QDRANT_URL`, `QDRANT_API_KEY` and
+  `QDRANT_COLLECTION_PREFIX`. That prefix is this app's namespace: **start every collection name
+  with it** — what the code calls `documents` is created as
+  `${process.env.QDRANT_COLLECTION_PREFIX}documents`. Never hardcode a bare collection name; that
+  is how two apps end up in each other's vectors.
 - Other engines are available when the app genuinely needs them (MySQL/MariaDB, MongoDB, Redis) — spin
   injects `DATABASE_URL`, `MONGODB_URI` or `REDIS_URL` the same way. On redis the keyspace is
   shared, so spin also injects `REDIS_PREFIX`: prefix **every** key with it.
