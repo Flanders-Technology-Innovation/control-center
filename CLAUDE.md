@@ -1,6 +1,6 @@
 @AGENTS.md
 
-<!-- spin:guidelines v18 — managed by spin; keep this block, spin keeps it up to date -->
+<!-- spin:guidelines v20 — managed by spin; keep this block, spin keeps it up to date -->
 This app runs on **spin**, elli's internal app platform. Two documents in this
 repository are maintained by spin — read both before changing anything:
 
