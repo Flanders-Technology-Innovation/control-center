@@ -26,6 +26,26 @@ builds, runs, and stays secure on the platform.
 - For sensitive actions, optionally verify `X-Spin-Identity` (an HS256 JWT signed with
   the `SPIN_APP_SECRET` env var).
 
+## Pages that must work without sign-in (public paths)
+- By default **every** path needs sign-in, so an anonymous visitor — or another service calling in —
+  reaches the sign-in screen, never this app. spin can serve **individual path prefixes** without
+  sign-in, sub-paths included: open `/public` and `/public/logo.png` is open too.
+- So anything that has to answer publicly **stays in this app**: a page shared with an external
+  partner, a webhook another service POSTs to, an RSS/iCal feed, a status endpoint, an image an
+  email or a link preview has to load. **Never** move such a file to an external host, a public
+  bucket or an image hosting service to get around sign-in.
+- Serve it under one obvious prefix (`/public/…`, `/webhooks/…`, `/share/…`, `/feed`),
+  keep everything else outside it, and ask the owner to open that prefix in spin: the app's
+  **Access** tab → *Public pages*. Nothing is public until they say so — spin suggests prefixes that
+  look public after a deploy, so a well-named prefix is usually one click.
+- Assets a public page loads (images, CSS, JS, fonts) must sit under a public prefix too, or the
+  page renders broken for anonymous visitors.
+- Write those routes as if nobody is signed in: no `X-Spin-User-*` headers arrive, only
+  `X-Spin-Public: 1` and `X-Spin-Env` — guard every identity read. A webhook receiver must
+  verify its sender itself (signature/HMAC); the gateway does not authenticate anonymous calls.
+  Never put admin or data-changing routes under a public prefix, and remember public paths open on
+  the **production** address only.
+
 ## This app's own URL
 - spin publishes every app on its own subdomain, so the app's public address lives in spin, not in
   the code. It is injected as `SPIN_APP_URL` (no trailing slash), together with `SPIN_APP_HOST`,
@@ -200,6 +220,10 @@ builds, runs, and stays secure on the platform.
 - For files that must persist (uploads, generated output), write them under **one stable absolute
   path** and say which path, so spin can mount a durable volume there. Treat caches, tmp, and build
   output as disposable.
+- A credentials file the app needs but may not commit (a service-account JSON, a certificate) is
+  **uploaded by the owner** on the app's Environment tab and mounted read-only where they say. Read
+  its path from an env var and fail loudly when it is missing — never commit one, never invent a
+  placeholder, and never write to one.
 - Never hardcode absolute paths from a developer's machine; derive paths from a base directory or env var.
 
 ## Going live (git)
