@@ -138,6 +138,14 @@ builds, runs, and stays secure on the platform.
 - Always set `purpose` (a short stable label) and set `onBehalfOf` when a user's action caused
   the call: together they make the owner's cost report answerable. Never put a credential, token or
   password into a prompt.
+- **The one exception to "no SDK, no key":** an app running on **each user's own key** whose owner
+  also switched on **Hand the key to the app**. Then — and only then — the visitor's own Anthropic
+  credential arrives on every request as `X-Spin-Ai-Kind`, `X-Spin-Ai-Token`, `X-Spin-Ai-Headers`
+  (the exact request headers, as JSON) and `X-Spin-Ai-Api-Url` (or as `integrations.ai` from the
+  OAuth userinfo endpoint), and the app may call Anthropic directly on that visitor's account —
+  server-side only, read fresh per request, never logged, stored or sent to the browser. The app's
+  "For your AI agent" prompt in spin carries the contract; `ai.keyForwarded` from
+  `GET {SPIN_API_URL}/api/spin/whoami` says whether it applies.
 - Call it **server-side only** — never expose `SPIN_API_TOKEN` to the browser. In local development
   the variables are absent: return a canned answer, so the app still runs offline.
 
