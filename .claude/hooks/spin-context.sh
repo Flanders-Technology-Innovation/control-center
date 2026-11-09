@@ -5,9 +5,12 @@
 set -eu
 
 echo "This app runs on cyantula, your company's internal app platform."
-echo "Platform rules: .spin/guidelines.md — how the app must behave (auth, data, config, cron)."
+echo "Platform rules: .spin/guidelines.md — how the app must behave (auth, data, config, dependencies, cron)."
 echo "Design rules:   DESIGN.md — how it must look and feel."
-echo "Both are maintained by cyantula. Do not edit them; put project notes in CLAUDE.md."
+if [ -f .spin/company.md ]; then
+  echo "Company rules:  .spin/company.md — your organisation's own stack, libraries and conventions; same weight."
+fi
+echo "All of them are maintained by cyantula. Do not edit them; put project notes in CLAUDE.md."
 echo
 
 # Point at what this repository is actually missing, rather than repeating advice.
