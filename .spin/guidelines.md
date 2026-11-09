@@ -169,10 +169,49 @@ builds, runs, and stays secure on the platform.
   `X-Spin-User-*` headers; this app's own signed-in users can still hit `/api/shared/` from the
   browser, so check whichever header the endpoint expects. Answer JSON within 30 s, under 10 MB.
 
+## Colleagues the app should know before they sign in (people sync)
+- The identity headers only say who is in front of the app **right now**. An app that has to plan
+  around colleagues who have not opened it yet — a roster that gives a teacher a room, a duty list,
+  a team board — must not make the owner type those people in by hand, and must not build its own
+  "invite" or "add user" screen for people cyantula already knows.
+- Instead the owner switches on **"The app may know who can open it, before they sign in"** (the
+  app's Access tab, or `configure_app peopleSync: true`), and the app reads its own access list:
+  `GET {SPIN_API_URL}/api/spin/people?page=1` with `Authorization: Bearer {SPIN_API_TOKEN}`
+  (both injected on the next deploy after the switch; server-side only). The answer is everyone who
+  may open the app today — the owner, the people on the list, the members of its groups — each with
+  the same fields the `X-Spin-User-*` headers carry, `active` (false = switched off in cyantula) and
+  `groups`, **lowercased like `X-Spin-User-Groups`**; plus the access-list `groups`, a `digest` of the
+  whole list and `page`/`pages`. Nothing beyond the access list: it is not the company directory.
+- Keep **one** `syncPeople()` that upserts the app's own table by e-mail, marks everybody missing
+  as inactive (**never delete**: history stays), and stores the `digest` to skip unchanged answers.
+  Call it at startup in the background, and from `POST /api/cron/sync-people`: cyantula keeps that
+  system task on the app's cron tab while the switch is on and fires it **hourly and the minute the
+  list changes** (its JSON `trigger` is then `"CHANGE"`); it arrives like every scheduled task, so
+  require `X-Spin-Cron` and answer 2xx. A visitor the copy does not know yet is added from the
+  headers at once, and a sync is scheduled.
+- The sync owns name, e-mail, active and groups; what the app adds about a person lives in columns
+  of its own. In local development `SPIN_API_URL` is absent — skip the sync, the dummy user is enough.
+
 ## Serving
 - Listen on `0.0.0.0` (not `localhost`) and read the port from the `PORT` env var.
 - Do not add HTTPS/TLS handling — cyantula terminates TLS in front of the app.
 - Start with no interactive steps: install dependencies, build, then run.
+
+## Dependencies & runtime (always the latest stable version)
+- **Use the latest stable release of everything you add**: the runtime (Node, Python, ...), the
+  framework, every library. Never type a version number from memory. What you remember as "the
+  current version" is months old by definition, so look it up at the moment you add it
+  (`npm view <package> version`, `pip index versions <package>`, the registry or the project's
+  releases page) and let the package manager record it in the lockfile.
+- Pick the **current LTS of the runtime** in the Dockerfile and in `engines` / `.python-version`,
+  not the one a tutorial happened to use. Read a library's current documentation rather than an
+  older major's API from memory, and never pin an older major "because that is the one you know".
+- **Commit the lockfile** (`package-lock.json`, `pnpm-lock.yaml`, `uv.lock`, `poetry.lock`, ...) so
+  every deploy installs exactly what you tested.
+- **Whenever you work in an existing app, bring its dependencies up to date too** (`npm outdated`,
+  `npm audit fix`, `pip list --outdated`), security patches first. cyantula scans every deploy for
+  known vulnerabilities and shows them to the owner; an app left on last year's versions is where
+  those come from. Update, run the app, and fix what the update broke instead of staying behind.
 
 ## Icon (favicon)
 - **Every app ships a favicon.** cyantula reads it after each deploy and uses it as the app's icon on
