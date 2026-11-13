@@ -1,6 +1,6 @@
 @AGENTS.md
 
-<!-- spin:guidelines v28 — managed by cyantula; keep this block, cyantula keeps it up to date -->
+<!-- spin:guidelines v30 — managed by cyantula; keep this block, cyantula keeps it up to date -->
 This app runs on **cyantula**, your company's internal app platform. Two documents in this
 repository are maintained by cyantula — read both before changing anything:
 

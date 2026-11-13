@@ -298,11 +298,12 @@ builds, runs, and stays secure on the platform.
   runs one shared Qdrant server and injects `QDRANT_URL`, `QDRANT_API_KEY` and
   `QDRANT_COLLECTION_PREFIX`. That prefix is this app's namespace: **start every collection name
   with it** — what the code calls `documents` is created as
-  `${process.env.QDRANT_COLLECTION_PREFIX}documents`. Never hardcode a bare collection name; that
-  is how two apps end up in each other's vectors.
+  `${process.env.QDRANT_COLLECTION_PREFIX}documents`. Never hardcode a bare collection name: cyantula
+  refuses a collection outside the prefix (403), and only the REST API is open to apps, not gRPC.
 - Other engines are available when the app genuinely needs them (MySQL/MariaDB, MongoDB, Redis) — cyantula
   injects `DATABASE_URL`, `MONGODB_URI` or `REDIS_URL` the same way. On redis the keyspace is
-  shared, so cyantula also injects `REDIS_PREFIX`: prefix **every** key with it.
+  shared, so cyantula also injects `REDIS_PREFIX`: prefix **every** key with it — the app's own redis
+  user (its credentials are in `REDIS_URL`) is refused any key outside that prefix.
 - For files that must persist (uploads, generated output), write them under **one stable absolute
   path** and say which path, so cyantula can mount a durable volume there. Treat caches, tmp, and build
   output as disposable.
